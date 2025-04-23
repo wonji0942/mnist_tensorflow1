@@ -1,14 +1,7 @@
 import tensorflow.compat.v1 as tf
 tf.disable_eager_execution()
+import keras
 import pandas as pd
-import numpy as np
-import random
-
-# Seed 설정 (재현 가능성 보장)
-seed = 7
-random.seed(seed)
-np.random.seed(seed)
-tf.set_random_seed(seed)
 
 # Model Parameters
 learning_rate = 0.001
@@ -38,15 +31,15 @@ Y = tf.placeholder(tf.float32, [None, n_classes])
 
 # Weights and biases initialization
 weights = {
-    'h1': tf.Variable(tf.random_normal([n_input, n_hidden1], seed=seed)),
-    'h2': tf.Variable(tf.random_normal([n_hidden1, n_hidden2], seed=seed)),
-    'out': tf.Variable(tf.random_normal([n_hidden2, n_classes], seed=seed))
+    'h1': tf.Variable(tf.random_normal([n_input, n_hidden1])),
+    'h2': tf.Variable(tf.random_normal([n_hidden1, n_hidden2])),
+    'out': tf.Variable(tf.random_normal([n_hidden2, n_classes]))
 }
 
 biases = {
-    'b1': tf.Variable(tf.random_normal([n_hidden1], seed=seed)),
-    'b2': tf.Variable(tf.random_normal([n_hidden2], seed=seed)),
-    'out': tf.Variable(tf.random_normal([n_classes], seed=seed))
+    'b1': tf.Variable(tf.random_normal([n_hidden1])),
+    'b2': tf.Variable(tf.random_normal([n_hidden2])),
+    'out': tf.Variable(tf.random_normal([n_classes]))
 }
 
 # Create model
@@ -73,7 +66,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 init = tf.global_variables_initializer()
 total_batch = x_train.shape[0] // batch_size
 
-# Dataset batching
+# Create a Dataset object for batching & batch size iterator generation
 dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
 iterator = tf.data.make_initializable_iterator(dataset)
 next_batch = iterator.get_next()
@@ -81,30 +74,38 @@ next_batch = iterator.get_next()
 # Start Training
 with tf.Session() as sess:
     sess.run(init)
+    sess.run(iterator.initializer)
 
     for epoch in range(num_epochs):
-        sess.run(iterator.initializer)
         avg_loss = 0.
-
         for i in range(total_batch):
             batch_x, batch_y = sess.run(next_batch)
             _, l = sess.run([train_op, loss_op], feed_dict={X: batch_x, Y: batch_y})
             avg_loss += l / total_batch
 
+        # Display logs per epoch (퍼센트 곱하기 100)
         acc = sess.run(accuracy, feed_dict={X: x_test, Y: y_test})
-        print("Epoch:", '%02d' % (epoch + 1), 
-              "Loss:", "{:.4f}".format(avg_loss), 
-              "Accuracy:", "{:.4f}%".format(acc))
+        print("Epoch:", '%02d' % (epoch+1), 
+                "Loss:", "{:.4f}".format(avg_loss), 
+                "Accuracy:", "{:.4f}".format(acc))  # 소수점 네 자리, 퍼센트 X
 
+
+        # Re-initialize iterator for next epoch
+        sess.run(iterator.initializer)
+
+    # Calculate accuracy for MNIST test images
     final_acc = sess.run(accuracy, feed_dict={X: x_test, Y: y_test})
-    print("Final Test Accuracy: {:.4f} %".format(final_acc))
-    print("Tensorflow version:", tf.__version__)
+    print("Final Test Accuracy: {:.4f}".format(final_acc))  # 퍼센트 없이 네 자리
 
-    # Output student data
+    print()
+    print("Tensorflow:", tf.__version__)
+
     data = {
         '이름': ['신원지'],
-        '학번': [12312010],
+        '학번': [2312010], 
         '학과': ['데이터사이언스학과']
     }
+    print()
     df = pd.DataFrame(data)
-    print(df)
+    print(df)  
+    print() 
